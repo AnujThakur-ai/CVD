@@ -33,8 +33,25 @@ import streamlit as st
 # pickle / joblib unpickles the pipeline seamlessly.
 
 def data_preprocessing(df: pd.DataFrame) -> pd.DataFrame:
-    """Preprocesses input data: converts age if needed, drops duplicates and id column."""
+    """Preprocesses input data: encodes text categories, converts age if needed, drops duplicates and id column."""
     df = df.copy()
+    
+    # Safely convert text categories to numeric codes if strings/labels are passed
+    if 'gender' in df.columns:
+        gender_map = {'female': 1, 'Female': 1, '1': 1, 1: 1, 'male': 2, 'Male': 2, '2': 2, 2: 2}
+        df['gender'] = df['gender'].map(gender_map).fillna(df['gender']).astype(int)
+        
+    for col in ['smoke', 'alco', 'active']:
+        if col in df.columns:
+            flag_map = {'yes': 1, 'Yes': 1, '1': 1, 1: 1, True: 1, 'no': 0, 'No': 0, '0': 0, 0: 0, False: 0}
+            df[col] = df[col].map(flag_map).fillna(df[col]).astype(int)
+            
+    for col in ['cholesterol', 'gluc']:
+        if col in df.columns:
+            if pd.api.types.is_string_dtype(df[col]):
+                df[col] = df[col].astype(str).str.extract(r'(\d)')[0].fillna(df[col]).astype(int)
+            else:
+                df[col] = df[col].astype(int)
     
     # If age is given in days (> 120), convert to years; if already in years, preserve it
     if 'age' in df.columns:
